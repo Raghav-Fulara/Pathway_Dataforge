@@ -56,7 +56,7 @@ Single self-contained HTML file. No frameworks, no CDN, no network calls, no coo
 
 ## Reproducing the results
 
-**The artifact itself needs no setup:** open `index.html` in any modern browser (works offline — no build, no install, no sign-in). To host it, serve the folder statically (e.g. GitHub Pages).
+**The artifact itself needs no setup:** open `index.html` in any modern browser (works offline — no build, no install, no sign-in).
 
 **Local components** (the reference implementation and honesty tests) require:
 - Python 3.9+ with `numpy` (`pip install numpy`)

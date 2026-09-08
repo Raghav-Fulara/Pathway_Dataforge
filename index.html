@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Synapses as Working Memory — an interactive explainer</title>
+<meta name="description" content="Interactive explainer: how Hebbian writes turn a network's wiring into short-term memory, why interference breaks it, and where the mechanism lives in BDH and BDH-CQ.">
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --line:#2d3646;
+  --text:#e6edf3; --dim:#9aa7b8; --faint:#6e7b8d;
+  --truth:#4fc3f7; --est:#ffb74d; --bad:#ef5350; --good:#66bb6a; --accent:#c792ea;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font:16px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;}
+.wrap{max-width:1060px;margin:0 auto;padding:0 20px}
+section{padding:34px 0;border-bottom:1px solid var(--line)}
+h1{font-size:clamp(26px,4.5vw,40px);line-height:1.2;letter-spacing:-.5px}
+h2{font-size:clamp(20px,3vw,27px);margin-bottom:6px;letter-spacing:-.3px}
+h3{font-size:17px;margin:18px 0 8px}
+p{margin:10px 0;color:var(--text)}
+.dim{color:var(--dim)} .faint{color:var(--faint);font-size:13.5px}
+.kicker{color:var(--accent);font-family:var(--mono);font-size:13px;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px}
+.claim{background:linear-gradient(135deg,#1a2332,#161b22);border:1px solid #3b4a63;border-left:4px solid var(--accent);padding:16px 18px;border-radius:10px;font-size:17.5px;margin:18px 0}
+nav{position:sticky;top:0;z-index:50;background:rgba(13,17,23,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:8px 0;font-size:13.5px}
+nav .wrap{display:flex;gap:14px;flex-wrap:wrap}
+nav a{color:var(--dim);text-decoration:none;padding:3px 8px;border-radius:6px}
+nav a:hover{color:var(--text);background:var(--panel2)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin:14px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+@media(max-width:760px){.grid2,.grid3{grid-template-columns:1fr}}
+canvas{display:block;width:100%;height:auto;border-radius:8px;background:#0a0e14}
+.btn{background:var(--panel2);color:var(--text);border:1px solid var(--line);padding:9px 16px;border-radius:8px;font-size:15px;cursor:pointer}
+.btn:hover{border-color:#4a5a75;background:#222c3d}
+.btn.primary{background:#2b3a5c;border-color:#4a6da7}
+.btn.primary:hover{background:#33507e}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.ctl{display:flex;flex-direction:column;gap:4px;min-width:150px;flex:1}
+.ctl label{font-size:13px;color:var(--dim)}
+.ctl label b{color:var(--text);font-family:var(--mono);font-weight:600}
+input[type=range]{width:100%;accent-color:#7c9cd6;height:28px}
+.pgrid{display:grid;gap:2px}
+.pcell{aspect-ratio:1;border-radius:2px;background:#232b3a}
+.pcell.on{background:var(--truth)}
+.pcell.on.v{background:var(--est)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--dim);margin-top:6px}
+.legend span::before{content:"";display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px;background:var(--truth)}
+.legend .l-est::before{background:var(--est)}
+.legend .l-bad::before{background:var(--bad)}
+.tag{display:inline-block;font-family:var(--mono);font-size:11.5px;padding:2px 8px;border-radius:20px;border:1px solid var(--line);color:var(--dim);margin:2px 4px 2px 0}
+.tag.live{color:#7ee3a8;border-color:#2e5c40}
+.tag.toy{color:var(--est);border-color:#6b4c26}
+.tag.src{color:var(--truth);border-color:#2c5570}
+.eq{font-family:var(--mono);background:#0a0e14;border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-size:15.5px;overflow-x:auto;margin:12px 0;line-height:1.9}
+.eq sub,.eq sup{font-size:11px}
+.simbar{height:14px;background:#232b3a;border-radius:7px;overflow:hidden;margin:4px 0}
+.simbar>div{height:100%;border-radius:7px;transition:width .25s}
+.tbl{width:100%;border-collapse:collapse;font-size:13.5px;margin:10px 0}
+.tbl th,.tbl td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+.tbl th{background:var(--panel2);font-weight:600}
+.quote{border-left:3px solid var(--truth);padding:10px 14px;background:#10161f;border-radius:0 8px 8px 0;margin:12px 0;font-size:15px;color:#cfd9e4}
+.quote .src{display:block;margin-top:6px;font-size:12.5px;color:var(--faint)}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.tab{padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-size:14px;color:var(--dim)}
+.tab.active{background:#2b3a5c;color:var(--text);border-color:#4a6da7}
+.warn{border:1px solid #6b4c26;background:#241d10;border-radius:10px;padding:14px 16px;margin:14px 0;font-size:14.5px}
+.warn b{color:var(--est)}
+.note{border:1px solid #2c5570;background:#0f1922;border-radius:10px;padding:14px 16px;margin:14px 0;font-size:14.5px}
+footer{padding:30px 0 60px;color:var(--dim);font-size:14px}
+ol.steps{margin:10px 0 10px 22px}
+ol.steps li{margin:6px 0}
+.check{display:flex;gap:10px;align-items:flex-start;margin:8px 0}
+.check input{margin-top:5px}
+.bigstat{font-family:var(--mono);font-size:30px;font-weight:600}
+.kv{display:flex;justify-content:space-between;font-size:14px;padding:4px 0;border-bottom:1px dashed #232b3a}
+.kv b{font-family:var(--mono)}
+.statbox{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;text-align:center}
+.statbox .lab{font-size:12.5px;color:var(--dim);margin-top:2px}
+textarea{width:100%;min-height:80px;background:#0a0e14;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px;font:14px var(--mono)}
+a{color:var(--truth)}
+.mini{font-size:13px;color:var(--dim)}
+.overlay{position:fixed;inset:0;background:rgba(5,8,12,.85);z-index:100;display:none;align-items:center;justify-content:center;padding:20px}
+.overlay.open{display:flex}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;max-width:640px;width:100%;padding:24px;max-height:88vh;overflow:auto}
+.fade{animation:fade .5s}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.flash{animation:flash .8s}
+@keyframes flash{0%{box-shadow:0 0 0 3px var(--est)}100%{box-shadow:0 0 0 3px transparent}}
+@media(prefers-reduced-motion:reduce){.fade,.flash{animation:none}}
+.skipnav{position:absolute;left:-9999px}
+.skipnav:focus{left:8px;top:8px;background:var(--panel);padding:8px;z-index:200;border-radius:6px}
+</style>
+</head>
+<body>
+<a class="skipnav" href="#claim">Skip to the claim</a>
+
+<nav><div class="wrap">
+  <b style="color:var(--text)">Synapses ⇄ Working Memory</b>
+  <a href="#hero">0 · Live</a><a href="#write">1 · Write</a><a href="#break">2 · Break</a>
+  <a href="#lenses">3 · Three lenses</a><a href="#bdh">4 · BDH</a><a href="#sandbox">5 · Sandbox</a>
+  <a href="#sixty">6 · 60-second test</a><a href="#limits">Limits</a>
+</div></nav>
+
+<div class="wrap">
+
+<header style="padding:44px 0 10px">
+  <div class="kicker">DataForge 2026 · Pathway Track · Memory &amp; Learning</div>
+  <h1>Synaptic plasticity is short-term memory</h1>
+  <p class="dim" style="font-size:17px;max-width:760px">How a network can turn its own wiring into working memory — and precisely how that memory fails. Everything on this page is computed live in your browser. Nothing is a video.</p>
+  <div class="claim" id="claim">
+    <b>The claim (falsifiable):</b> a network can store recent associations in a fixed-size synaptic state through Hebbian writes — no gradient step, no new memory slot per token — but as stored associations accumulate, interference corrupts retrieval until recall fails.
+    <div class="faint" style="margin-top:8px">Your job is to break this sentence. Section 2 lets you do exactly that.</div>
+  </div>
+  <div>
+    <span class="tag live">● all computation live</span>
+    <span class="tag toy">toy model — not BDH (see §4)</span>
+    <span class="tag src">every BDH claim cites a primary source</span>
+    <span class="tag">zero dependencies · works offline</span>
+  </div>
+</header>
+
+<!-- ============================================================ 0 HERO -->
+<section id="hero">
+  <div class="kicker">0 · The system is already running</div>
+  <h2>Watch synapses become memory</h2>
+  <p class="dim">Pairs of sparse patterns — a <b style="color:var(--truth)">key</b> and a <b style="color:var(--est)">value</b> — arrive one at a time. Each arrival strengthens synapses (one rank-one Hebbian write into the matrix below). The panel on the right probes memory with the most recent key: <i>retrieved</i> is compared against <i>truth</i>. Early on, recall is essentially perfect. Keep watching.</p>
+
+  <div class="grid2">
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <h3 style="margin:0">Synaptic state M <span class="faint">(d×d, fixed size)</span></h3>
+        <button class="btn" id="heroPause" aria-label="pause or resume the live stream">⏸ pause</button>
+      </div>
+      <canvas id="heroMat" width="480" height="480" role="img" aria-label="Heatmap of the synaptic state matrix, updating as pairs arrive"></canvas>
+      <div class="kv"><span>pairs stored so far</span><b id="heroCount">0</b></div>
+      <div class="kv"><span>state size</span><b>24 × 24 = 576 synapses (never grows)</b></div>
+      <div class="kv"><span>memory slots allocated per token</span><b>0</b></div>
+      <p class="faint">Each write: M ← λM + v·kᵀ with λ = 0.98. Brightness = synaptic weight. The state is the memory — there is no cache, no list, no lookup table.</p>
+    </div>
+    <div class="panel">
+      <h3 style="margin:0">Probe: retrieve what k₃₆ ⇒ v₃₆?</h3>
+      <div class="grid2" style="margin-top:8px">
+        <div><div class="mini">cue key k (input)</div><div class="pgrid" id="heroK" style="grid-template-columns:repeat(12,1fr)"></div></div>
+        <div><div class="mini">truth value v</div><div class="pgrid" id="heroV" style="grid-template-columns:repeat(12,1fr)"></div></div>
+      </div>
+      <div class="grid2" style="margin-top:10px">
+        <div><div class="mini">retrieved M·k <span class="tag live" style="margin-left:4px">live</span></div><div class="pgrid" id="heroR" style="grid-template-columns:repeat(12,1fr)"></div></div>
+        <div style="display:flex;flex-direction:column;justify-content:flex-end">
+          <div class="mini">retrieval similarity (cosine)</div>
+          <div class="simbar"><div id="heroSimBar" style="width:0%;background:var(--good)"></div></div>
+          <div class="bigstat" id="heroSim">—</div>
+          <div class="mini" id="heroVerdict">waiting…</div>
+        </div>
+      </div>
+      <div class="legend"><span>key / cue units</span><span class="l-est">value units</span></div>
+      <p class="faint" id="heroNote">Probes target the pair stored 3 steps ago — recent memory. The 60-second test in §6 probes <i>old</i> memory under load; that is where the claim breaks.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 1 WRITE -->
+<section id="write">
+  <div class="kicker">1 · The write, up close</div>
+  <h2>One association = one outer product</h2>
+  <p class="dim">Store and probe pairs yourself. Present a pair: the key lights pre-synaptic units, the value lights post-synaptic units, and every active (pre, post) pair of units strengthens its synapse by +1 — Hebb's rule, <i>“cells that fire together, wire together.”</i> Retrieval reads the same synapses with a cue.</p>
+  <div class="eq">write:&nbsp; M<sub>t</sub> = λ·M<sub>t−1</sub> + <b>v kᵀ</b>&nbsp;&nbsp;&nbsp; read:&nbsp; r = M<sub>t</sub>·q&nbsp;&nbsp;&nbsp; λ = <span id="lamEcho1">1.00</span> (pure addition here)</div>
+  <div class="controls">
+    <button class="btn primary" id="btnPresent">▸ Present a new pair (k, v)</button>
+    <button class="btn" id="btnProbe" disabled>🔍 Probe the oldest stored pair</button>
+    <button class="btn" id="btnReset1">↺ reset memory</button>
+    <span class="mini" id="writeCount">0 pairs stored</span>
+  </div>
+  <div class="grid2">
+    <div class="panel">
+      <h3 style="margin:0">Synaptic state M <span class="faint" id="writeFlashHint">— flashes on write</span></h3>
+      <canvas id="writeMat" width="480" height="480" role="img" aria-label="Synaptic state matrix for the manual write-and-recall experiment"></canvas>
+    </div>
+    <div class="panel" id="writeResult">
+      <h3 style="margin:0">Retrieval vs truth</h3>
+      <p class="faint" style="margin-top:4px">Present at least one pair, then probe.</p>
+      <div class="grid2">
+        <div><div class="mini">retrieved r = M·k₀</div><div class="pgrid" id="writeR" style="grid-template-columns:repeat(12,1fr)"></div></div>
+        <div><div class="mini">truth v₀</div><div class="pgrid" id="writeV" style="grid-template-columns:repeat(12,1fr)"></div></div>
+      </div>
+      <div class="mini" style="margin-top:10px">cosine similarity</div>
+      <div class="simbar"><div id="writeSimBar" style="width:0%;background:var(--good)"></div></div>
+      <div id="writeVerdict" class="mini"></div>
+    </div>
+  </div>
+  <div class="note"><b>Why retrieval works.</b> After t writes the state is M<sub>t</sub> = Σᵢ λ<sup>t−i</sup> vᵢkᵢᵀ, so reading with cue q gives
+    <span class="eq" style="margin:8px 0">M<sub>t</sub>q = Σᵢ λ<sup>t−i</sup> (kᵢ·q) · vᵢ</span>
+    Retrieval is a <b>similarity-weighted sum of all stored values</b>. Keys are sparse and nearly orthogonal → (kᵢ·q) ≈ 0 for everything except the matching key → the right value dominates. Keep that Σ in mind: every other term is still in there. That sum is the seed of the failure you'll cause next.</div>
+</section>
+
+<!-- ============================================================ 2 BREAK -->
+<section id="break">
+  <div class="kicker">2 · Now break the claim</div>
+  <h2>Load the memory until recall fails</h2>
+  <p class="dim">Three real variables. <b>Before you drag: predict what happens.</b> Then drag <b>stored pairs</b> to the right and watch exact-match recall collapse while the state stays exactly 24×24.</p>
+  <div class="controls">
+    <div class="ctl"><label>stored pairs <b id="vLoad">12</b></label><input type="range" id="sLoad" min="1" max="60" value="12" aria-label="number of stored associations"></div>
+    <div class="ctl"><label>decay λ per write <b id="vLam">1.00</b></label><input type="range" id="sLam" min="0.80" max="1" step="0.01" value="1" aria-label="decay lambda per write"></div>
+    <div class="ctl"><label>key overlap <b id="vOv">0%</b></label><input type="range" id="sOv" min="0" max="0.6" step="0.05" value="0" aria-label="fraction of active units shared between consecutive keys"></div>
+  </div>
+  <div class="grid2">
+    <div class="panel">
+      <h3 style="margin:0">Recall vs load <span class="faint">(recomputed live, every drag)</span></h3>
+      <canvas id="capChart" width="640" height="380" role="img" aria-label="Line chart of cosine similarity and exact match rate versus number of stored pairs"></canvas>
+      <div class="legend"><span style="color:#4fc3f7">— mean cosine to truth</span><span style="color:#ffb74d">— exact-match rate</span><span style="color:#ef5350">— interference share of retrieval</span></div>
+    </div>
+    <div class="panel">
+      <h3 style="margin:0">Where the retrieval goes wrong</h3>
+      <p class="mini" style="margin:4px 0">One probe, decomposed. Retrieval = target term + crosstalk from the other <span id="decompN">11</span> pairs. Bars show the weights λ<sup>t−i</sup>(kᵢ·q) of the closed-form sum — the Σ from §1, itemized.</p>
+      <canvas id="decompChart" width="640" height="300" role="img" aria-label="Stacked contribution of each stored pair to one retrieval"></canvas>
+      <div class="statgrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
+        <div class="statbox"><div class="bigstat" id="statExact">—</div><div class="lab">exact-match recall</div></div>
+        <div class="statbox"><div class="bigstat" id="statSim">—</div><div class="lab">mean cosine</div></div>
+        <div class="statbox"><div class="bigstat" id="statInt">—</div><div class="lab">interference share</div></div>
+      </div>
+      <p class="faint" id="breakVerdict"></p>
+    </div>
+  </div>
+  <div class="warn"><b>The failure is the lesson.</b> Nothing leaked or got deleted: with λ=1 every stored pair is still perfectly present in M. Retrieval fails because <i>superposition is not storage</i> — the read M·q returns the matching value <i>plus</i> the residual similarity of every other key. Capacity is finite even though the state never grows. This exact effect — “endlessly adding new associations to a memory of finite size inevitably will reach a limit” — is the capacity limit of linear-attention memories identified by Schlag, Irie &amp; Schmidhuber (ICML 2021).</div>
+</section>
+
+<!-- ============================================================ 3 LENSES -->
+<section id="lenses">
+  <div class="kicker">3 · One mechanism, three vocabularies</div>
+  <h2>The same equation in three fields</h2>
+  <p class="dim">Same live state, same numbers — three readings. Understanding all three is what lets you read BDH (a neuron–synapse model), the fast-weights literature, and the linear-attention literature as <i>one</i> subject.</p>
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-tab="syn" role="tab">🧠 Neuroscience: Hebbian synapses</button>
+    <button class="tab" data-tab="fw" role="tab">⚡ ML: fast weights</button>
+    <button class="tab" data-tab="la" role="tab">🔗 ML: linear attention</button>
+  </div>
+  <div class="panel" id="tab-syn">
+    <div class="eq">recent co-activation strengthens a synapse:&nbsp; Δw<sub>ij</sub> = v<sub>i</sub>·k<sub>j</sub>;&nbsp; decay λ = forgetting;&nbsp; read = pattern completion</div>
+    <p>The matrix M <i>is</i> the wiring: M<sub>ij</sub> is the strength of synapse from pre-synaptic unit j to post-synaptic unit i. Presenting a pair potentiates the synapses between its active units; a partial cue re-activates the completed pattern. Working memory without a separate buffer — the network's own connectivity, temporarily.</p>
+    <div class="grid2"><div><div class="mini">current key (pre-synaptic)</div><div class="pgrid" id="lensK" style="grid-template-columns:repeat(12,1fr)"></div></div>
+    <div><div class="mini">current value (post-synaptic)</div><div class="pgrid" id="lensV" style="grid-template-columns:repeat(12,1fr)"></div></div></div>
+    <p class="faint">Sparse, non-negative patterns mirror BDH's reported activation statistics (§4): only ~5% of units active, activations positive.</p>
+  </div>
+  <div class="panel" id="tab-fw" style="display:none">
+    <div class="eq">slow weights θ (fixed at inference) &nbsp;+&nbsp; fast weights M<sub>t</sub> = λM<sub>t−1</sub> + v kᵀ (rewritten every step)</div>
+    <p>The network has two weight sets at two timescales. The <b>slow weights</b> are learned by gradient descent and frozen at inference. The <b>fast weights</b> M are “parameter-shaped” memory rewritten by the input stream itself — context stored <i>in the weights</i>, not beside them. The line of work from Schmidhuber (1992) through fast-weight programmers (Schlag et al., ICML 2021) to Titans (Behrouz et al., 2025) and test-time-training layers (Sun et al., 2024) builds exactly this: a slow net that learns good write/read rules, and a fast state that carries the context.</p>
+    <p>In this toy the write rule is hand-set (pure Hebb); in those systems it is <i>learned</i>. That is the single biggest gap between the toy and the frontier.</p>
+  </div>
+  <div class="panel" id="tab-la" style="display:none">
+    <div class="eq">S<sub>t</sub> = λS<sub>t−1</sub> + v<sub>t</sub>k<sub>t</sub>ᵀ,&nbsp; o<sub>t</sub> = S<sub>t</sub>q<sub>t</sub>&nbsp;&nbsp;⟵&nbsp; linear attention as an RNN with a matrix state</div>
+    <p>Linear (kernel) attention removes softmax so the attention state can be carried forward incrementally: no re-scanning of all past tokens, and — unlike a KV cache — the state has <b>fixed size</b> independent of sequence length. Gated linear attention (Yang et al., 2024), RWKV-7 (Peng et al., 2025), DeltaNet and Mamba-2's SSD view are all points in this design space: what differs is the write rule (additive, gated, delta-rule, learned).</p>
+    <div class="note"><b>The special case that leads to BDH-CQ.</b> The Pathway problem statement notes that BDH-CQ relates its contextual memory to “linear-attention views of contextual association, with the special case where <b>state accumulates additively per demonstration</b>.” Additive per-demonstration accumulation is exactly this toy with λ = 1 per demo: each demonstration leaves a rank-one trace in recurrent state; nothing is optimized at inference (§4).</div>
+    <p class="faint">Set λ = 1 in §2 and you are looking at the additive regime; lower λ trades old memory for interference resistance.</p>
+  </div>
+</section>
+
+<!-- ============================================================ 4 BDH -->
+<section id="bdh">
+  <div class="kicker">4 · Where this lives in Pathway's BDH and BDH-CQ</div>
+  <h2>This topic is not adjacent to BDH — it is BDH's mechanism</h2>
+  <p class="dim">The DataForge brief describes synaptic plasticity as short-term memory as “BDH's mechanism in its conceptual neuron–synapse model, where attention becomes synaptic memory through Hebbian writes.” Here is what the primary sources actually say — every quote below is from the cited paper.</p>
+
+  <div class="quote">“The working memory of BDH during inference <b>entirely relies on synaptic plasticity with Hebbian learning</b> using spiking neurons.”
+    <span class="src">— Kosowski, Uznański, Chorowski, Stamirowska &amp; Bartoszkiewicz, <i>The Dragon Hatchling: The Missing Link between the Transformer and Models of the Brain</i>, arXiv:2509.26507 (2025), abstract.</span></div>
+  <div class="quote">“We confirm empirically that specific, individual synapses strengthen connection whenever BDH hears or reasons about a specific concept while processing language inputs.” &nbsp;<span class="tag src">monosemantic synapses</span>
+    <span class="src">— same paper, abstract.</span></div>
+  <div class="quote">“Activation vectors of BDH are sparse and positive. We demonstrate monosemanticity in BDH on language tasks.” &nbsp;<span class="tag src">sparse non-negative activations</span>
+    <span class="src">— same paper, abstract. The sparse, non-negative patterns in this toy (§0–§3) mirror this design point.</span></div>
+  <div class="quote">“Inputs presented at inference time <b>continuously update the model's recurrent memory</b>; the model then solves a query through iterative computation in a high-dimensional latent space, <b>without verbalizing its intermediate reasoning</b>.”
+    <span class="src">— Engdahl, Kosowski, Chorowski, Stamirowska, Uznański, Jiang, Phadke, Kinas &amp; Zhong, <i>BDH-CQ: In-Context Learning with Recurrent Latent Reasoning</i>, arXiv:2608.09888 (2026), abstract.</span></div>
+
+  <h3>What changes in each system during inference</h3>
+  <table class="tbl">
+    <tr><th>System</th><th>What carries the context</th><th>Updated how, at inference</th><th>Relation to this toy</th></tr>
+    <tr><td>Transformer</td><td>KV cache (grows with every token)</td><td>append-only; memory cost grows with sequence length</td><td>contrast: no fixed-size state, no interference from superposition — it pays with growth</td></tr>
+    <tr><td>Linear-attention RNNs (GLA, RWKV-7, …)</td><td>fixed-size matrix state S<sub>t</sub></td><td>learned additive/gated writes</td><td>same state equation; write rule is learned, not hand-set</td></tr>
+    <tr><td><b>BDH</b> (arXiv:2509.26507)</td><td>synapses between neuron-like units — “attention reformulated as synaptic memory that updates as the model reads”</td><td>Hebbian plasticity with spiking neurons; working memory “entirely relies” on it</td><td>the toy's write rule is BDH's conceptual mechanism; BDH embeds it in a trained scale-free network of local interactions</td></tr>
+    <tr><td><b>BDH-CQ</b> (arXiv:2608.09888)</td><td>recurrent memory updated by demonstrations</td><td>no parameter updates at inference — adaptation happens in recurrent state (per the problem statement: “state accumulates additively per demonstration”)</td><td>the toy with λ=1: each demonstration adds a rank-one trace; the model adapts without any gradient step</td></tr>
+    <tr><td>HRM / TRM on ARC (optimization route)</td><td>fine-tuned parameters</td><td>backward passes on augmented demo pairs before each task</td><td>the opposite route: adapt <i>weights</i> vs adapt <i>state</i></td></tr>
+  </table>
+
+  <h3>Evidence table — labeled honestly</h3>
+  <table class="tbl">
+    <tr><th>Claim</th><th>Source</th><th>Evidence level</th></tr>
+    <tr><td>BDH rivals GPT-2 performance on language/translation at 10M–1B parameters, same data (Transformer-like scaling)</td><td>BDH paper (arXiv:2509.26507)</td><td>developer-reported, arXiv preprint; not peer-reviewed at time of writing</td></tr>
+    <tr><td>BDH's inference-time working memory relies entirely on Hebbian synaptic plasticity; monosemantic synapses; sparse positive activations</td><td>BDH paper, abstract</td><td>developer-reported empirical claims in preprint</td></tr>
+    <tr><td>BDH-CQ: 150M-parameter configuration reaches 29.5% pass@2 on the public ARC-AGI-1 evaluation at ≈ $0.0007 computed inference cost per task</td><td>BDH-CQ report (arXiv:2608.09888)</td><td>developer-reported, arXiv preprint; the authors' companion repo (pathwaycom/arc-task-gen) names external evaluators (Ł. Kaiser; R. Kinas; R. Zhong — the latter two are also paper co-authors). Not an independent third-party audit.</td></tr>
+    <tr><td>BDH ≠ a state-space model in the Mamba sense; the GPU-oriented formulation (“BDH-GPU”) is built from ReLU-low-rank transformations with linear attention</td><td>DataForge 2026 Pathway problem statement</td><td>organizer-provided framing; the BDH abstract calls BDH an “attention-based state space sequence learning architecture,” which is not the Mamba SSM claim — do not conflate them</td></tr>
+    <tr><td>Pretraining experiments from 1B to 600B parameters; SageMaker HyperPod integration</td><td>problem statement, citing Pathway communications</td><td>company-announced; not independently verified; we make no accuracy claims about it</td></tr>
+  </table>
+
+  <div class="warn"><b>Honesty boundary — read this.</b> The interactive system on this page is <b>our independent toy</b>. It is NOT a BDH or BDH-CQ model, not trained, not spiking, d = 24 rather than millions of units, and its write rule is hand-set rather than learned. It demonstrates the <i>mechanism family</i> (Hebbian/fast-weight state) that the BDH paper reports as its working-memory mechanism. No checkpoint of BDH-CQ is public, and the brief does not expect teams to run one.</div>
+</section>
+
+<!-- ============================================================ 5 SANDBOX -->
+<section id="sandbox">
+  <div class="kicker">5 · Sandbox — all variables, all live</div>
+  <h2>Run the experiment yourself</h2>
+  <p class="dim">Every control maps to one real variable in the math. Each drag recomputes the full experiment (up to 80 writes × 80 probes = 6,400 reads) in well under a second, in your browser.</p>
+  <div class="controls">
+    <div class="ctl"><label>state size d <b id="vD">24</b></label><input type="range" id="sD" min="12" max="64" step="4" value="24" aria-label="state dimension d"></div>
+    <div class="ctl"><label>decay λ <b id="vLam2">1.00</b></label><input type="range" id="sLam2" min="0.8" max="1" step="0.01" value="1" aria-label="decay lambda"></div>
+    <div class="ctl"><label>sparsity of patterns <b id="vSp">20%</b></label><input type="range" id="sSp" min="0.08" max="0.5" step="0.02" value="0.2" aria-label="fraction of active units per pattern"></div>
+    <div class="ctl"><label>key overlap <b id="vOv2">0%</b></label><input type="range" id="sOv2" min="0" max="0.6" step="0.05" value="0" aria-label="key overlap"></div>
+    <div class="ctl"><label>cue noise σ <b id="vNz">0.00</b></label><input type="range" id="sNz" min="0" max="0.5" step="0.05" value="0" aria-label="uniform cue noise half-width"></div>
+    <div class="ctl"><label>non-negative read <b id="vNn">off</b></label><input type="range" id="sNn" min="0" max="1" step="1" value="0" aria-label="clamp retrieval to non-negative values (BDH-style)"></div>
+    <div class="ctl"><label>seed <b id="vSd">42</b></label><input type="range" id="sSd" min="1" max="99" step="1" value="42" aria-label="random seed for pattern generation"></div>
+  </div>
+  <div class="grid2">
+    <div class="panel"><h3 style="margin:0">Capacity curve</h3><canvas id="sbCap" width="640" height="380" role="img" aria-label="sandbox capacity curve"></canvas></div>
+    <div class="panel"><h3 style="margin:0">Forgetting under decay (probe of pair #1)</h3><canvas id="sbDecay" width="640" height="380" role="img" aria-label="similarity of the first stored pair as later pairs arrive"></canvas>
+    <p class="faint">With λ &lt; 1 old traces fade geometrically — recent context is kept, old context is released. With λ = 1 nothing fades; only interference degrades recall. These are two different failure modes of the same memory: <b>forgetting by decay</b> vs <b>forgetting by interference</b>.</p></div>
+  </div>
+  <div class="panel"><h3 style="margin:0">Live readouts</h3>
+    <div class="statgrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+      <div class="statbox"><div class="bigstat" id="sbExact">—</div><div class="lab">exact-match @ full load</div></div>
+      <div class="statbox"><div class="bigstat" id="sbSim">—</div><div class="lab">mean cosine @ full load</div></div>
+      <div class="statbox"><div class="bigstat" id="sbCap50">—</div><div class="lab">largest load with ≥50% exact recall</div></div>
+      <div class="statbox"><div class="bigstat" id="sbParams">—</div><div class="lab">state parameters (d²)</div></div>
+    </div>
+    <p class="faint" id="sbReadout"></p>
+  </div>
+</section>
+
+<!-- ============================================================ 6 60s TEST -->
+<section id="sixty">
+  <div class="kicker">6 · The 60-second test</div>
+  <h2>Reproduce the claim in under a minute</h2>
+  <p class="dim">Press start. The system will (1) store one pair and prove perfect recall, (2) store forty and re-probe the same pair, (3) hand you the numbers. Then you explain it back — the real test of learning.</p>
+  <div class="controls"><button class="btn primary" id="btn60">▶ Start the 60-second test</button><span class="mini" id="t60">not running</span></div>
+  <div class="panel" id="result60" style="display:none"></div>
+</section>
+
+<!-- ============================================================ LIMITS -->
+<section id="limits">
+  <div class="kicker">7 · Limitations, misconceptions, credits</div>
+  <h2>What this toy does not claim</h2>
+  <ol class="steps">
+    <li><b>Not biological realism.</b> Hebbian co-activation capture is a computational abstraction of plasticity, not a model of LTP/LTD kinetics, neuromodulation or spiking dynamics (BDH uses spiking neurons; this toy does not).</li>
+    <li><b>Not a trained system.</b> The write/read rules are fixed. Frontier systems (DeltaNet, Titans, TTT, BDH) <i>learn</i> their write rules; capacity and noise behavior differ qualitatively once the rule is optimized.</li>
+    <li><b>Caps, stated:</b> d ∈ [12, 64], ≤ 80 stored pairs, ≤ 99 seeds, uniform cue noise (not Gaussian). All for sub-second response; nothing else is hidden.</li>
+    <li><b>Metric definitions:</b> “exact match” = retrieved vector's nearest stored value is the correct one (ℓ₂); “interference share” = ‖retrieval − decayed target term‖ / ‖retrieval‖.</li>
+    <li><b>Numbers depend on the seed.</b> That's why the seed is a control. The qualitative collapse is robust across seeds; the exact crossing point is not.</li>
+    <li><b>BDH evidence is developer-reported preprints</b> (see §4 table). A benchmark is not a deployment; a company announcement is not an independent evaluation.</li>
+    <li><b>Common misconception:</b> “fixed state ⇒ information is deleted.” With λ=1 nothing is deleted — retrieval, not storage, degrades. Superposition ≠ lossless storage.</li>
+  </ol>
+  <h3>Primary sources</h3>
+  <ol class="steps mini">
+    <li>Kosowski, Uznański, Chorowski, Stamirowska, Bartoszkiewicz. <i>The Dragon Hatchling: The Missing Link between the Transformer and Models of the Brain.</i> arXiv:2509.26507 (2025).</li>
+    <li>Engdahl et al. <i>BDH-CQ: In-Context Learning with Recurrent Latent Reasoning.</i> arXiv:2608.09888 (2026).</li>
+    <li>Schlag, Irie, Schmidhuber. <i>Linear Transformers Are Secretly Fast Weight Programmers.</i> ICML 2021, arXiv:2102.11174.</li>
+    <li>Irie, Schmidhuber, et al. <i>Fast weight programming and linear transformers: from machine learning to neurobiology.</i> arXiv:2508.08435, accepted to TMLR (2025).</li>
+    <li>Behrouz, Zhong, Mirrokni. <i>Titans: Learning to Memorize at Test Time.</i> arXiv:2501.00663 (2024).</li>
+    <li>Yang, Wang, Shen, Panda, Kim. <i>Gated Linear Attention Transformers with Hardware-Efficient Training.</i> ICML 2024, arXiv:2312.06635.</li>
+    <li>Peng et al. <i>RWKV-7 “Goose” with Expressive Dynamic State Evolution.</i> arXiv:2503.14456 (2025).</li>
+    <li>Sun et al. <i>Learning to (Learn at Test Time): RNNs with Expressive Hidden States.</i> arXiv:2407.04620 (2024).</li>
+    <li>Dao, Gu. <i>Transformers are SSMs: … Structured State Space Duality.</i> ICML 2024, arXiv:2405.21060.</li>
+    <li>Pathway research essays: <i>From Attention to Synapses: Deriving BDH</i>; <i>The Equations of Reasoning</i> (pathway.com/research).</li>
+  </ol>
+  <p class="faint">DataForge 2026 Pathway Track submission · topic: <b>Synaptic Plasticity as Short-Term Memory</b> · all computation runs locally in this page · reference NumPy implementation + JS↔Python cross-implementation test in the repository · MIT license.</p>
+</section>
+
+<footer><div class="wrap" style="padding:0">
+  <p>Built for the DataForge 2026 Pathway track. One claim, one substrate, honest labels.
+  Source code: <span id="repoLink">see repository link in the submission README</span>.</p>
+</div></footer>
+
+</div><!-- /wrap -->
+
+<!-- 60s test modal -->
+<div class="overlay" id="ovl60"><div class="modal" id="modal60"></div></div>
+
+<script>
+/* ================================================================
+   fw-core: the exact math, mirrored by reference/fast_weights.py.
+   The honesty test (reference/test_fast_weights.py) extracts this block
+   and compares against NumPy on fixed seeds. Do not change one side alone.
+   ================================================================ */
+const FW = (() => {
+  class PortRng {
+    constructor(seed){ this.s = (seed >>> 0) || 1; }
+    next(){ this.s = (Math.imul(1664525, this.s) + 1013904223) >>> 0; return this.s / 4294967296; }
+    choice(n, k){
+      const idx = Array.from({length:n}, (_, i) => i);
+      for (let i = 0; i < k; i++){
+        const j = i + Math.floor(this.next() * (n - i));
+        [idx[i], idx[j]] = [idx[j], idx[i]];
+      }
+      return idx.slice(0, k);
+    }
+    uniform(n, lo, hi){ const out = []; for (let i=0;i<n;i++) out.push(lo + (hi-lo)*this.next()); return out; }
+  }
+
+  function makeState(d){ return new Float64Array(d*d); }
+
+  function hebbianWrite(M, k, v, lam, d){
+    const O = new Float64Array(d*d);
+    for (let i=0;i<d;i++){ const vi = v[i];
+      for (let j=0;j<d;j++) O[i*d+j] = lam*M[i*d+j] + vi*k[j];
+    }
+    return O;
+  }
+
+  function read(M, q, d){
+    const r = new Float64Array(d);
+    for (let i=0;i<d;i++){ let s=0; for (let j=0;j<d;j++) s += M[i*d+j]*q[j]; r[i]=s; }
+    return r;
+  }
+
+  const roundHalfUp = x => Math.floor(x + 0.5);
+
+  function sparseBinaryPattern(rng, d, sparsity){
+    const x = new Float64Array(d);
+    const nOn = Math.max(1, roundHalfUp(sparsity * d));
+    for (const i of rng.choice(d, nOn)) x[i] = 1;
+    return x;
+  }
+
+  function makePairGenerator(d, sparsity, overlap, seed){
+    const rngK = new PortRng(seed), rngV = new PortRng(seed + 1);
+    let prev = null;
+    return () => {
+      const k = sparseBinaryPattern(rngK, d, sparsity);
+      if (prev !== null && overlap > 0){
+        const kOn = [], pOn = [];
+        for (let i=0;i<d;i++){ if (k[i]>0) kOn.push(i); if (prev[i]>0) pOn.push(i); }
+        const nSwap = roundHalfUp(overlap * Math.min(kOn.length, pOn.length));
+        for (let j=0;j<nSwap;j++){ k[kOn[j]] = 0; k[pOn[j]] = 1; }
+      }
+      const v = sparseBinaryPattern(rngV, d, sparsity);
+      prev = Float64Array.from(k);
+      return [k, v];
+    };
+  }
+
+  function dot(a, b){ let s=0; for (let i=0;i<a.length;i++) s += a[i]*b[i]; return s; }
+  function norm(a){ return Math.sqrt(dot(a, a)); }
+  function cosine(a, b){ const na=norm(a), nb=norm(b); return (na===0||nb===0)?0:dot(a,b)/(na*nb); }
+
+  function exactMatch(r, values){
+    let best=Infinity, bi=-1;
+    for (let i=0;i<values.length;i++){
+      let s=0; for (let j=0;j<r.length;j++){ const e=r[j]-values[i][j]; s += e*e; }
+      if (s < best){ best=s; bi=i; }
+    }
+    return bi;
+  }
+
+  function capacityCurve(opts){
+    const {d=24, lam=1.0, nPairs=40, sparsity=0.2, overlap=0.0, seed=42, cueNoise=0.0, nonneg=false} = opts;
+    const rngNoise = new PortRng(seed + 99);
+    const gen = makePairGenerator(d, sparsity, overlap, seed);
+    let M = makeState(d);
+    const keys=[], values=[], rows=[];
+    for (let t=1;t<=nPairs;t++){
+      const [k, v] = gen();
+      M = hebbianWrite(M, k, v, lam, d);
+      keys.push(k); values.push(v);
+      const sims=[], exacts=[], shares=[];
+      for (let i=0;i<t;i++){
+        let q = keys[i];
+        if (cueNoise > 0){
+          const nz = rngNoise.uniform(d, -cueNoise, cueNoise);
+          q = Float64Array.from(q, (x, j) => x + nz[j]);
+        }
+        let r = read(M, q, d);
+        if (nonneg){ r = Float64Array.from(r, x => Math.max(0, x)); }
+        sims.push(cosine(r, values[i]));
+        exacts.push(exactMatch(r, values) === i ? 1 : 0);
+        const targetW = Math.pow(lam, t-1-i) * dot(keys[i], q);
+        let tnorm=0, rnorm=0;
+        for (let j=0;j<d;j++){ const e = r[j] - targetW*values[i][j]; tnorm += e*e; rnorm += r[j]*r[j]; }
+        shares.push(Math.sqrt(tnorm) / (Math.sqrt(rnorm) + 1e-12));
+      }
+      rows.push({load:t, meanSim:mean(sims), exactRate:mean(exacts), interferenceShare:mean(shares)});
+    }
+    return rows;
+  }
+
+  function decayCurve(opts){
+    const {d=24, sparsity=0.2, nPairs=8, lam=0.9, seed=7} = opts;
+    const gen = makePairGenerator(d, sparsity, 0.0, seed);
+    let M = makeState(d);
+    const [k0, v0] = gen();
+    M = hebbianWrite(M, k0, v0, lam, d);
+    const rows=[];
+    for (let t=1;t<=nPairs;t++){
+      const [k, v] = gen();
+      M = hebbianWrite(M, k, v, lam, d);
+      rows.push({laterPairs:t, simFirst:cosine(read(M, k0, d), v0)});
+    }
+    return rows;
+  }
+
+  function fullDecompose(keys, values, lam, q){
+    const t = keys.length;
+    const terms = [];
+    for (let i=0;i<t;i++) terms.push({w: Math.pow(lam, t-1-i) * dot(keys[i], q), i});
+    return terms;
+  }
+
+  function mean(a){ let s=0; for (const x of a) s+=x; return s/a.length; }
+
+  return {PortRng, makeState, hebbianWrite, read, sparseBinaryPattern, makePairGenerator,
+          dot, norm, cosine, exactMatch, capacityCurve, decayCurve, fullDecompose, mean};
+})();
+/* ============== end of fw-core ============== */
+
+
+/* ================================================================
+   UI layer
+   ================================================================ */
+const $ = id => document.getElementById(id);
+const clamp = (x,a,b) => Math.min(b, Math.max(a,x));
+
+/* ---------- drawing helpers ---------- */
+function viridis(t){
+  t = clamp(t,0,1);
+  const stops = [[68,1,84],[59,82,139],[33,145,140],[94,201,98],[253,231,37]];
+  const x = t*(stops.length-1), i = Math.min(stops.length-2, Math.floor(x)), f = x-i;
+  const c = stops[i].map((v,k)=> Math.round(v + f*(stops[i+1][k]-v)));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+function drawMatrix(canvas, M, d, flashRow){
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, cell = W/d;
+  let mx = 1e-12; for (let i=0;i<M.length;i++) mx = Math.max(mx, Math.abs(M[i]));
+  ctx.fillStyle = '#0a0e14'; ctx.fillRect(0,0,W,canvas.height);
+  for (let i=0;i<d;i++) for (let j=0;j<d;j++){
+    const v = M[i*d+j]/mx;
+    if (v === 0){ ctx.fillStyle = '#141a24'; }
+    else ctx.fillStyle = viridis(Math.abs(v));
+    ctx.fillRect(j*cell, i*cell, cell-0.75, cell-0.75);
+  }
+  if (flashRow != null){
+    ctx.strokeStyle = 'rgba(255,183,77,.9)'; ctx.lineWidth = 2;
+    ctx.strokeRect(0, flashRow*cell, W, cell);
+  }
+}
+function drawPattern(el, x, cls, thr){
+  el.innerHTML = '';
+  const d = x.length, on = Math.max(1e-9, thr ?? Math.max(...x));
+  for (let i=0;i<d;i++){
+    const c = document.createElement('div');
+    c.className = 'pcell' + (x[i] >= 0.5*on && x[i]>0.02 ? ' '+(cls||'') : '');
+    if (x[i]>0.02 && x[i] < 0.5*on){ c.style.background = 'rgba(79,195,247,.35)'; }
+    el.appendChild(c);
+  }
+}
+function lineChart(canvas, series, opts){
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const pad = {l:44, r:12, t:14, b:30};
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#0a0e14'; ctx.fillRect(0,0,W,H);
+  const xs = opts.x, xmin = Math.min(...xs), xmax = Math.max(...xs);
+  const allY = series.flatMap(s => s.y);
+  const ymin = opts.ymin ?? Math.min(0, ...allY), ymax = opts.ymax ?? Math.max(1, ...allY);
+  const X = v => pad.l + (v-xmin)/(xmax-xmin)*(W-pad.l-pad.r);
+  const Y = v => H-pad.b - (v-ymin)/(ymax-ymin)*(H-pad.t-pad.b);
+  ctx.strokeStyle = '#232b3a'; ctx.lineWidth = 1; ctx.font = '11px monospace'; ctx.fillStyle = '#6e7b8d';
+  for (let g=0; g<=4; g++){
+    const yv = ymin + g*(ymax-ymin)/4, y = Y(yv);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W-pad.r, y); ctx.stroke();
+    ctx.fillText(yv.toFixed(1), 6, y+4);
+  }
+  const xt = xs.filter((_,i)=> i % Math.ceil(xs.length/8) === 0);
+  for (const xv of xt){ ctx.fillText(String(xv), X(xv)-6, H-8); }
+  if (opts.vline != null){
+    ctx.strokeStyle = '#ef535088'; ctx.setLineDash([5,4]);
+    ctx.beginPath(); ctx.moveTo(X(opts.vline), pad.t); ctx.lineTo(X(opts.vline), H-pad.b); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  for (const s of series){
+    ctx.strokeStyle = s.color; ctx.lineWidth = 2.2; ctx.beginPath();
+    xs.forEach((xv,i)=>{ const px=X(xv), py=Y(s.y[i]); i?ctx.lineTo(px,py):ctx.moveTo(px,py); });
+    ctx.stroke();
+  }
+  ctx.fillStyle = '#6e7b8d'; ctx.fillText(opts.xlabel || '', W-pad.r-60, H-8);
+}
+function simColor(s){ return s>0.95?'var(--good)': s>0.75?'#cddc39': s>0.5?'var(--est)':'var(--bad)'; }
+
+/* ---------- §0 hero: preset already running ---------- */
+const hero = { d:24, lam:0.98, gen:null, M:null, n:0, pairs:[], probeLag:3, paused:false, last:null };
+hero.gen = FW.makePairGenerator(hero.d, 0.2, 0, 7);
+hero.M = FW.makeState(hero.d);
+function heroStep(){
+  if (hero.paused) return;
+  const [k, v] = hero.gen();
+  hero.M = FW.hebbianWrite(hero.M, k, v, hero.lam, hero.d);
+  hero.pairs.push({k, v});
+  hero.n++;
+  if (hero.n > 60){ // session restart — labeled, not hidden
+    hero.M = FW.makeState(hero.d); hero.pairs = []; hero.n = 0;
+    $('heroNote').textContent = 'Session restarted after 60 pairs (cap stated in §7).';
+  }
+  drawMatrix($('heroMat'), hero.M, hero.d);
+  $('heroCount').textContent = hero.n;
+  // probe the pair stored probeLag steps ago
+  const idx = Math.max(0, hero.pairs.length - 1 - hero.probeLag);
+  const {k:pk, v:pv} = hero.pairs[idx];
+  const r = FW.read(hero.M, pk, hero.d);
+  const s = FW.cosine(r, pv);
+  drawPattern($('heroK'), pk, '');
+  drawPattern($('heroV'), pv, 'v');
+  drawPattern($('heroR'), r, 'v');
+  const bar = $('heroSimBar'); bar.style.width = (s*100).toFixed(1)+'%';
+  bar.style.background = simColor(s);
+  $('heroSim').textContent = s.toFixed(3);
+  $('heroSim').style.color = simColor(s);
+  $('heroVerdict').innerHTML = s > 0.95 ? '<span style="color:var(--good)">near-perfect recall</span>' :
+    s > 0.75 ? '<span style="color:#cddc39">recalled, with crosstalk</span>' :
+    `<span style="color:var(--bad)">degraded — interference (§2)</span>`;
+}
+drawMatrix($('heroMat'), hero.M, hero.d);
+let heroTimer = setInterval(heroStep, 1100);
+setTimeout(heroStep, 250); // something visible immediately
+$('heroPause').onclick = () => {
+  hero.paused = !hero.paused;
+  $('heroPause').textContent = hero.paused ? '▶ resume' : '⏸ pause';
+};
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (reduceMotion){ hero.paused = true; $('heroPause').textContent = '▶ resume'; for(let i=0;i<8;i++) heroStep(); hero.paused=false; clearInterval(heroTimer); }
+
+/* ---------- §1 write & recall ---------- */
+const w1 = { d:24, lam:1.0, gen: FW.makePairGenerator(24, 0.2, 0, 11), M: FW.makeState(24), pairs: [] };
+drawMatrix($('writeMat'), w1.M, w1.d);
+function renderWriteCount(){ $('writeCount').textContent = w1.pairs.length + (w1.pairs.length===1?' pair':' pairs') + ' stored'; $('btnProbe').disabled = w1.pairs.length===0; }
+$('btnPresent').onclick = () => {
+  const [k, v] = w1.gen();
+  w1.M = FW.hebbianWrite(w1.M, k, v, w1.lam, w1.d);
+  w1.pairs.push({k, v});
+  drawMatrix($('writeMat'), w1.M, w1.d, null);
+  const panel = $('writeMat').parentElement; panel.classList.remove('flash'); void panel.offsetWidth; panel.classList.add('flash');
+  renderWriteCount();
+};
+$('btnProbe').onclick = () => {
+  if (!w1.pairs.length) return;
+  const {k, v} = w1.pairs[0];               // probe the OLDEST pair — harshest test
+  const r = FW.read(w1.M, k, w1.d);
+  drawPattern($('writeR'), r, 'v');
+  drawPattern($('writeV'), v, 'v');
+  const s = FW.cosine(r, v);
+  const bar = $('writeSimBar'); bar.style.width = (s*100).toFixed(1)+'%'; bar.style.background = simColor(s);
+  $('writeVerdict').innerHTML = `cosine = <b>${s.toFixed(3)}</b> — ` + (s>0.95?'essentially perfect': s>0.75?'correct but contaminated by crosstalk':'failing: the oldest pair is being overwritten by superposition');
+};
+$('btnReset1').onclick = () => { w1.M = FW.makeState(w1.d); w1.pairs=[]; drawMatrix($('writeMat'), w1.M, w1.d); renderWriteCount(); $('writeVerdict').textContent=''; $('writeSimBar').style.width='0%'; };
+renderWriteCount();
+
+/* ---------- §2 break it ---------- */
+function runBreak(){
+  const load = +$('sLoad').value, lam = +$('sLam').value, ov = +$('sOv').value;
+  $('vLoad').textContent = load; $('vLam').textContent = lam.toFixed(2); $('vOv').textContent = Math.round(ov*100)+'%';
+  const rows = FW.capacityCurve({d:24, lam, nPairs:60, sparsity:0.2, overlap:ov, seed:42});
+  const upTo = rows.filter(r => r.load <= load);
+  lineChart($('capChart'), [
+    {y: upTo.map(r=>r.meanSim), color:'#4fc3f7'},
+    {y: upTo.map(r=>r.exactRate), color:'#ffb74d'},
+    {y: upTo.map(r=>r.interferenceShare), color:'#ef5350'},
+  ], {x: upTo.map(r=>r.load), xlabel:'stored pairs', vline: load});
+  const cur = upTo[upTo.length-1];
+  $('statExact').textContent = (cur.exactRate*100).toFixed(0)+'%';
+  $('statSim').textContent = cur.meanSim.toFixed(2);
+  $('statInt').textContent = (cur.interferenceShare*100).toFixed(0)+'%';
+  $('statExact').style.color = cur.exactRate>0.9?'var(--good)': cur.exactRate>0.5?'var(--est)':'var(--bad)';
+  // decomposition of the oldest probe at current load
+  const d = 24, gen = FW.makePairGenerator(d, 0.2, ov, 42);
+  let M = FW.makeState(d); const ks=[], vs=[];
+  for (let t=0;t<load;t++){ const [k,v]=gen(); M=FW.hebbianWrite(M,k,v,lam,d); ks.push(k); vs.push(v); }
+  const terms = FW.fullDecompose(ks, vs, lam, ks[0]).sort((a,b)=>b.w-a.w);
+  $('decompN').textContent = load-1;
+  lineChart($('decompChart'), [
+    {y: terms.map(t=>t.w), color:'#ffb74d'},
+  ], {x: terms.map((_,i)=>i+1), ymin:Math.min(0,...terms.map(t=>t.w)), ymax:Math.max(1,...terms.map(t=>t.w)), xlabel:'stored pair (sorted by contribution)'});
+  // lens patterns
+  drawPattern($('lensK'), ks[ks.length-1], '');
+  drawPattern($('lensV'), vs[vs.length-1], 'v');
+  $('breakVerdict').innerHTML =
+    cur.exactRate === 1 ? 'All pairs still recalled exactly. The claim is holding — push the load higher.' :
+    cur.exactRate > 0.5 ? `Recall is failing for ${(100-cur.exactRate*100).toFixed(0)}% of pairs. The state still contains every pair (λ=${lam.toFixed(2)}); the READ is what degrades.` :
+    '<b style="color:var(--bad)">Claim broken.</b> Over half of retrievals now return the wrong stored value — interference, not deletion, and not a bug.';
+}
+['sLoad','sLam','sOv'].forEach(id => $(id).addEventListener('input', runBreak));
+runBreak();
+
+/* ---------- §3 tabs ---------- */
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('#lenses > .panel').forEach(x=>x.style.display='none');
+  t.classList.add('active'); $('tab-'+t.dataset.tab).style.display='block';
+});
+
+/* ---------- §5 sandbox ---------- */
+function runSandbox(){
+  const d=+$('sD').value, lam=+$('sLam2').value, sp=+$('sSp').value, ov=+$('sOv2').value,
+        nz=+$('sNz').value, nn=+$('sNn').value===1, sd=+$('sSd').value;
+  $('vD').textContent=d; $('vLam2').textContent=lam.toFixed(2); $('vSp').textContent=Math.round(sp*100)+'%';
+  $('vOv2').textContent=Math.round(ov*100)+'%'; $('vNz').textContent=nz.toFixed(2); $('vNn').textContent=nn?'on':'off'; $('vSd').textContent=sd;
+  const cap = FW.capacityCurve({d, lam, nPairs:80, sparsity:sp, overlap:ov, seed:sd, cueNoise:nz, nonneg:nn});
+  lineChart($('sbCap'), [
+    {y: cap.map(r=>r.meanSim), color:'#4fc3f7'},
+    {y: cap.map(r=>r.exactRate), color:'#ffb74d'},
+    {y: cap.map(r=>r.interferenceShare), color:'#ef5350'},
+  ], {x: cap.map(r=>r.load), xlabel:'stored pairs'});
+  const dec = FW.decayCurve({d, sparsity:sp, nPairs:12, lam:Math.min(lam,0.98), seed:sd});
+  lineChart($('sbDecay'), [{y: dec.map(r=>r.simFirst), color:'#4fc3f7'}],
+    {x: dec.map(r=>r.laterPairs), ymin:0, ymax:1, xlabel:'later pairs stored'});
+  const last = cap[cap.length-1];
+  const cap50row = cap.find(r => r.exactRate < 0.5);
+  $('sbExact').textContent = (last.exactRate*100).toFixed(0)+'%';
+  $('sbSim').textContent = last.meanSim.toFixed(2);
+  $('sbCap50').textContent = cap50row ? cap50row.load-1 : '≥80';
+  $('sbParams').textContent = (d*d).toLocaleString();
+  $('sbReadout').textContent =
+    `At d=${d}, λ=${lam.toFixed(2)}, sparsity=${Math.round(sp*100)}%, overlap=${Math.round(ov*100)}%, cue noise σ=${nz.toFixed(2)}${nn?', non-negative read':''}, seed=${sd}: ` +
+    (cap50row ? `exact recall first drops below 50% after ~${cap50row.load-1} stored pairs. Capacity is governed by how orthogonal the keys stay: fewer active units per key (lower sparsity) and less overlap store more pairs before crosstalk wins.` :
+     `exact recall stays ≥50% through the full 80-pair cap.`);
+}
+['sD','sLam2','sSp','sOv2','sNz','sNn','sSd'].forEach(id=>$(id).addEventListener('input', runSandbox));
+runSandbox();
+
+/* ---------- §6 sixty-second test ---------- */
+$('btn60').onclick = () => {
+  const t0 = performance.now();
+  $('result60').style.display = 'block';
+  $('result60').innerHTML = '<p class="dim">Running…</p>';
+  setTimeout(() => {
+    const d=24, lam=1.0;
+    const gen = FW.makePairGenerator(d, 0.2, 0, 2026);
+    let M = FW.makeState(d);
+    const [k0, v0] = gen();
+    M = FW.hebbianWrite(M, k0, v0, lam, d);
+    const s1 = FW.cosine(FW.read(M, k0, d), v0);
+    let pairs = 1;
+    for (let i=0;i<39;i++){ const [k,v]=gen(); M=FW.hebbianWrite(M,k,v,lam,d); pairs++; }
+    const s40 = FW.cosine(FW.read(M, k0, d), v0);
+    const em = FW.exactMatch(FW.read(M, k0, d), (()=>{ const g=FW.makePairGenerator(d,0.2,0,2026); const vs=[]; for(let i=0;i<40;i++) vs.push(g()[1]); return vs; })());
+    const secs = ((performance.now()-t0)/1000).toFixed(1);
+    $('t60').textContent = `completed in ${secs}s`;
+    $('result60').innerHTML = `
+      <h3>Result — the claim, reproduced and broken in ${secs}s</h3>
+      <div class="kv"><span>Store 1 pair, probe it</span><b style="color:var(--good)">cosine ${s1.toFixed(3)} — perfect</b></div>
+      <div class="kv"><span>Store 40 pairs (state still ${d}×${d} = ${d*d} numbers), probe the SAME pair</span><b style="color:${simColor(s40)}">cosine ${s40.toFixed(3)}${em===0?' — correct value still nearest':' — WRONG value now nearest'}</b></div>
+      <div class="kv"><span>gradient steps taken</span><b>0</b></div>
+      <div class="kv"><span>extra memory slots allocated</span><b>0</b></div>
+      <p style="margin-top:12px"><b>Now explain it back</b> (to yourself, a friend, or a judge):</p>
+      <ol class="steps">
+        <li>Where was the pair stored? <span class="faint">— in the synaptic state M itself, as a rank-one trace v₀k₀ᵀ.</span></li>
+        <li>Why was recall perfect at load 1? <span class="faint">— the cue matched the only key: M·k₀ = (k₀·k₀)v₀ ∝ v₀.</span></li>
+        <li>Why did it degrade at load 40? <span class="faint">— 39 other rank-one traces; the read returns v₀ plus their residual-key overlap. Interference, not deletion.</span></li>
+        <li>What would BDH-CQ call this? <span class="faint">— additive accumulation in recurrent state from demonstrations — adaptation without parameter updates (§4).</span></li>
+      </ol>
+      <textarea aria-label="your own explanation, for self-check" placeholder="Your own words: 'A fixed synaptic state stores associations by Hebbian writes, but…'"></textarea>
+      <p class="faint">If you can write that sentence and predict what λ=0.9 would do, you've learned the concept. (Check yourself in §5.)</p>`;
+    $('result60').scrollIntoView({behavior:'smooth', block:'nearest'});
+  }, 30);
+};
+</script>
+</body>
+</html>
